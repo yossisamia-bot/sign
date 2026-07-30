@@ -201,7 +201,7 @@ $('signBtn').addEventListener('click', async () => {
                         placed: f, pageHeight: H, raw: signedBytes };
   } catch (e) {
     alert('משהו נתקע בהטמעת החתימה: ' + e.message);
-    btn.disabled = false; btn.textContent = 'הטמע את החתימה במסמך';
+    btn.disabled = false; btn.textContent = 'אישור החתימה';
   }
 });
 
@@ -222,18 +222,21 @@ function canShareFiles() {
 }
 
 function setupDone() {
+  // המטרה: שגם מי שלא טכנולוגי יסיים לבד. לכן "שליחה חזרה" הוא הכפתור הגדול והראשון,
+  // וצפייה/שמירה משניים. אם השיתוף לא נתמך (בעיקר במחשב) - שמירה הופכת לראשית.
   const share = canShareFiles();
   show($('shareBtn'), share);
   const to = meta.share_email || '';
   if (to) {
     $('mailBtn').href = 'mailto:' + to +
       '?subject=' + encodeURIComponent(fileName()) +
-      '&body=' + encodeURIComponent('מצורף המסמך החתום.\n(יש לצרף את הקובץ שהורדתם.)');
+      '&body=' + encodeURIComponent('מצורף המסמך החתום.\n(יש לצרף את הקובץ שנשמר במכשיר.)');
   }
   show($('mailBtn'), !share && !!to);
+  $('dlBtn').classList.toggle('primary', !share);
   $('doneHint').textContent = share
-    ? 'שיתוף פותח את וואטסאפ / מייל עם הקובץ מצורף.'
-    : 'במחשב: מורידים את הקובץ ומצרפים אותו לוואטסאפ או למייל.';
+    ? 'הכפתור פותח את רשימת האפליקציות, בוחרים וואטסאפ (או מייל) והקובץ נשלח מצורף.'
+    : 'במחשב: שומרים את הקובץ ומצרפים אותו לוואטסאפ או למייל.';
 }
 
 $('viewBtn').addEventListener('click', () => {
@@ -257,7 +260,7 @@ $('againBtn').addEventListener('click', () => {
   clearPad();
   signedBytes = null;
   if (signedUrl) { URL.revokeObjectURL(signedUrl); signedUrl = null; }
-  $('signBtn').textContent = 'הטמע את החתימה במסמך';
+  $('signBtn').textContent = 'אישור החתימה';
   show($('doneStep'), false);
   show($('signStep'), true);
 });

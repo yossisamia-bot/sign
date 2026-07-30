@@ -21,8 +21,11 @@
   h2{font-size:16px;margin:0 0 8px}
   .sub{color:var(--muted);font-size:14px;margin:0}
   .hint{color:var(--muted);font-size:14px;margin:6px 0 0}
-  .docWrap{position:relative;line-height:0;border:1px solid var(--line);
-           border-radius:10px;overflow:hidden;background:#fff}
+  /* גובה מוגבל בכוונה: עמוד A4 מלא דוחף את לוח החתימה מתחת לקפל, ומי שלא מגלגל
+     חושב שאין מה לעשות. גלילה של המסמך קורית בתוך המסגרת. */
+  .docScroll{max-height:44vh;overflow:auto;-webkit-overflow-scrolling:touch;
+             border:1px solid var(--line);border-radius:10px;background:#fff}
+  .docWrap{position:relative;line-height:0}
   .docWrap img{width:100%;height:auto;display:block}
   .docWrap canvas{position:absolute;inset:0;width:100%;height:100%}
   /* הגובה נקבע מהפרופורציה של מקום החתימה במסמך (app.js קובע aspect-ratio) */
@@ -66,41 +69,44 @@
     </div>
 
     <div class="card">
-      <h2>המסמך</h2>
-      <div class="docWrap">
-        <img id="preview" alt="תצוגה מקדימה של המסמך">
-        <canvas id="overlay"></canvas>
+      <h2>1. המסמך</h2>
+      <div class="docScroll">
+        <div class="docWrap">
+          <img id="preview" alt="תצוגה מקדימה של המסמך">
+          <canvas id="overlay"></canvas>
+        </div>
       </div>
-      <p class="hint">אפשר להגדיל בשתי אצבעות כדי לקרוא.</p>
+      <p class="hint">גוללים בתוך המסגרת כדי לקרוא הכל.</p>
     </div>
 
     <div class="card" id="signStep">
-      <h2>החתימה שלך</h2>
+      <h2>2. החתימה שלך</h2>
       <p class="hint" style="margin-bottom:10px">חתמו באצבע בתוך המסגרת.</p>
       <canvas id="pad"></canvas>
       <div class="row">
-        <button id="clearBtn">נקה</button>
-        <button id="signBtn" class="primary" disabled>הטמע את החתימה במסמך</button>
+        <button id="clearBtn">מחיקה וחתימה מחדש</button>
+        <button id="signBtn" class="primary" disabled>אישור החתימה</button>
       </div>
     </div>
 
     <div class="card hide" id="doneStep">
-      <div class="ok">החתימה הוטמעה במסמך.</div>
+      <div class="ok">החתימה נוספה למסמך. נשאר רק לשלוח אותו חזרה.</div>
+      <h2 style="margin-top:14px">3. שליחה חזרה</h2>
       <div class="row">
-        <button id="viewBtn" class="primary">פתיחה וצפייה בקובץ</button>
+        <button id="shareBtn" class="primary">שליחה חזרה בוואטסאפ או במייל</button>
       </div>
+      <a id="mailBtn" class="btn hide" style="margin-top:10px">שליחה במייל</a>
       <div class="row">
-        <button id="shareBtn">שיתוף בוואטסאפ / מייל</button>
-        <button id="dlBtn">הורדה למכשיר</button>
+        <button id="viewBtn">פתיחת הקובץ לצפייה</button>
+        <button id="dlBtn">שמירה במכשיר</button>
       </div>
-      <a id="mailBtn" class="btn hide" style="margin-top:10px">פתיחת מייל</a>
       <p class="hint" id="doneHint"></p>
-      <div class="row"><button id="againBtn">חתימה מחדש</button></div>
+      <div class="row"><button id="againBtn">לחתום מחדש</button></div>
     </div>
 
     <p class="foot">החתימה מתבצעת במכשיר שלכם, המסמך לא נשלח לשום שרת.</p>
   </div>
 </main>
-<script type="module" src="app.js?v=2"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>
