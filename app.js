@@ -189,8 +189,8 @@ function makePad(canvas, aspect) {
     canvas.width = w; canvas.height = h;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap = ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#10233f';
-    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = '#1f3a93';
+    ctx.lineWidth = 2.0;
     if (keep) { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0, r.width, r.height); i.src = keep; }
   }
   size();
@@ -331,7 +331,7 @@ $('signBtn').addEventListener('click', async () => {
         while (size > 5 && font.widthOfTextAtSize(dateText, size) > maxW) size -= 0.5;
         // pdf-lib מודד y מלמטה; ה-rect שלנו הוא מקור שמאל-עליון.
         page.drawText(dateText, {
-          x: x0 + 3, y: H - y1 + size * 0.28, size, font, color: rgb(0.063, 0.137, 0.247),
+          x: x0 + 3, y: H - y1 + size * 0.28, size, font, color: rgb(0.122, 0.227, 0.576),
         });
       } else {
         const img = f.type === 'sig' ? sigImg : iniImg;
