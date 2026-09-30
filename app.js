@@ -172,10 +172,33 @@ function drawDateOnCanvas(g, art, box) {
 const filled = { sig: null, initials: null, date: null };
 const pads = [];
 
+// הדיו נשמר כקווים (נקודות ביחידות CSS של הלוח), לא רק כפיקסלים על הקנבס. אצבע שגולשת
+// מעבר לשפת הלוח ממשיכה להירשם (pointer capture), והחתימה שנכנסת למסמך נבנית מחדש מכל
+// הנקודות - כולל מה שמחוץ למסגרת - ואז מוקטנת למלבן במסמך (fit). 30/09/2026: החתימה של
+// נירית על טופסי 8879 יצאה חתוכה למעלה ולמטה, כי הקנבס שמר רק את מה שבתוך המסגרת.
+const INK = '#1f3a93', INK_W = 2.0;
+const OUT_SCALE = 3;        // רזולוציית החתימה שנכנסת ל-PDF, לא תלויה במסך של החותם
+const OUT_MAX_PX = 4000;    // תקרה - אצבע שנגררה על כל המסך לא תייצר תמונה ענקית
+
+function inkStyle(g) { g.lineCap = g.lineJoin = 'round'; g.strokeStyle = INK; g.lineWidth = INK_W; }
+function paintStroke(g, s) {
+  g.beginPath(); g.moveTo(s[0].x, s[0].y);
+  if (s.length === 1) g.lineTo(s[0].x + 0.1, s[0].y);   // נקודה בודדת (נקודה על i)
+  for (let i = 1; i < s.length; i++) g.lineTo(s[i].x, s[i].y);
+  g.stroke();
+}
+
 function makePad(canvas, aspect) {
   const ctx = canvas.getContext('2d');
   canvas.style.aspectRatio = aspect;
-  let drawing = false, hasInk = false, last = null;
+  let drawing = false, cur = null, baseW = 0;
+  const strokes = [];
+
+  function redraw() {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+    for (const s of strokes) paintStroke(ctx, s);
+  }
 
   // חייב לרוץ מחדש בכל שינוי פריסה: אם מודדים את הקנבס לפני שהפריסה התייצבה (טאב
   // מוסתר, סיבוב מסך, תמונה שנטענת) הוא נשאר בגודל אפסי והחתימה יוצאת מרוחה.
@@ -185,13 +208,16 @@ function makePad(canvas, aspect) {
     if (r.width < 20 || r.height < 20) return;
     const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
     if (w === canvas.width && h === canvas.height) return;
-    const keep = hasInk ? canvas.toDataURL() : null;
+    // הלוח שינה גודל (סיבוב מסך): הנקודות גדלות/קטנות איתו, בלי מתיחת פיקסלים
+    if (baseW && strokes.length) {
+      const k = r.width / baseW;
+      for (const s of strokes) for (const p of s) { p.x *= k; p.y *= k; }
+    }
+    baseW = r.width;
     canvas.width = w; canvas.height = h;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.lineCap = ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1f3a93';
-    ctx.lineWidth = 2.0;
-    if (keep) { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0, r.width, r.height); i.src = keep; }
+    inkStyle(ctx);
+    redraw();
   }
   size();
   if (window.ResizeObserver) new ResizeObserver(size).observe(canvas);
@@ -203,50 +229,51 @@ function makePad(canvas, aspect) {
   canvas.addEventListener('pointerdown', ev => {
     ev.preventDefault();
     canvas.setPointerCapture?.(ev.pointerId);
-    drawing = true; last = pt(ev);
-    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(last.x + 0.1, last.y); ctx.stroke();
-    hasInk = true; canvas.classList.add('has'); refreshReady();
+    drawing = true; cur = [pt(ev)]; strokes.push(cur);
+    paintStroke(ctx, cur);
+    canvas.classList.add('has'); refreshReady();
   });
   canvas.addEventListener('pointermove', ev => {
     if (!drawing) return;
     ev.preventDefault();
-    const p = pt(ev);
+    const p = pt(ev), last = cur[cur.length - 1];
+    cur.push(p);
     ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
-    last = p;
   });
-  for (const t of ['pointerup', 'pointercancel', 'pointerleave']) {
-    canvas.addEventListener(t, () => { drawing = false; });
-  }
+  const end = () => { drawing = false; cur = null; };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  // יציאה מהמסגרת לא עוצרת את הקו כל עוד האצבע על המסך (capture) - זה כל הרעיון
+  canvas.addEventListener('pointerleave', ev => {
+    if (!canvas.hasPointerCapture?.(ev.pointerId)) end();
+  });
 
   const api = {
     size,
-    get hasInk() { return hasInk; },
+    get hasInk() { return strokes.length > 0; },
     clear() {
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
-      hasInk = false; canvas.classList.remove('has'); refreshReady();
+      strokes.length = 0; end(); redraw();
+      canvas.classList.remove('has'); refreshReady();
     },
-    /* חיתוך למלבן הדיו בפועל - כדי שהכתב לא ייראה זעיר בתוך מסגרת ריקה */
+    /* החתימה במלבן הדיו בפועל (כולל מה שמחוץ ללוח) - כדי שהכתב לא ייראה זעיר בתוך
+       מסגרת ריקה ולא ייחתך בשפה */
     trimmed() {
-      const w = canvas.width, h = canvas.height;
-      const d = ctx.getImageData(0, 0, w, h).data;
-      let x0 = w, y0 = h, x1 = -1, y1 = -1;
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          if (d[(y * w + x) * 4 + 3] > 12) {
-            if (x < x0) x0 = x; if (x > x1) x1 = x;
-            if (y < y0) y0 = y; if (y > y1) y1 = y;
-          }
-        }
+      if (!strokes.length) return null;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const s of strokes) for (const p of s) {
+        if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+        if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
       }
-      if (x1 < 0) return null;
-      const m = Math.round(Math.min(w, h) * 0.02);
-      x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m);
-      x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
-      const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+      const m = INK_W + Math.max(x1 - x0, y1 - y0) * 0.02;
+      x0 -= m; y0 -= m; x1 += m; y1 += m;
+      const k = Math.min(OUT_SCALE, OUT_MAX_PX / Math.max(x1 - x0, y1 - y0));
+      const cw = Math.max(1, Math.ceil((x1 - x0) * k)), ch = Math.max(1, Math.ceil((y1 - y0) * k));
       const c = document.createElement('canvas');
       c.width = cw; c.height = ch;
-      c.getContext('2d').drawImage(canvas, x0, y0, cw, ch, 0, 0, cw, ch);
+      const g = c.getContext('2d');
+      g.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
+      inkStyle(g);
+      for (const s of strokes) paintStroke(g, s);
       return { canvas: c, w: cw, h: ch };
     },
   };
@@ -259,7 +286,7 @@ addEventListener('load', sizeAllPads);
 // הלוח מקבל פרופורציה נוחה לכתיבה ביד ולא את זו של המלבן במסמך: מלבן חתימה על קו
 // הוא שטוח קיצוני (6:1), ולוח כזה בנייד הוא רצועה שאי אפשר לחתום בה. החיתוך למלבן
 // הדיו + contain-fit מחזירים ממילא את הפרופורציה הטבעית של הכתב.
-const sigPad = has('sig') ? makePad($('pad'), 3) : null;
+const sigPad = has('sig') ? makePad($('pad'), 2.2) : null;   // היה 3 - לוח נמוך מדי בנייד (30/09)
 const iniPad = has('initials') ? makePad($('iniPad'), 2.2) : null;
 show($('sigBox'), has('sig'));
 show($('iniBox'), has('initials'));

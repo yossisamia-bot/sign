@@ -41,7 +41,7 @@
   .pads{display:flex;flex-direction:column;gap:16px}
   .padBox h3{font-size:15px;margin:0 0 2px}
   .padBox .hint{margin:0 0 8px}
-  canvas.pad{width:100%;height:auto;min-height:70px;max-height:200px;background:#fffdf5;
+  canvas.pad{width:100%;height:auto;min-height:70px;max-height:260px;background:#fffdf5;
        border:2px dashed #c9ced6;border-radius:10px;touch-action:none;display:block}
   canvas.pad.has{border-style:solid;border-color:var(--accent)}
   .padRow{display:flex;justify-content:flex-end;margin-top:6px}
@@ -100,7 +100,7 @@
       <div class="pads">
         <div class="padBox hide" id="sigBox">
           <h3>החתימה שלך</h3>
-          <p class="hint">חותמים באצבע בתוך המסגרת.</p>
+          <p class="hint">חותמים באצבע, בגודל נוח. גם מה שיוצא מהמסגרת נשמר, והחתימה מוקטנת אוטומטית למקום במסמך.</p>
           <canvas id="pad" class="pad"></canvas>
           <div class="padRow"><button id="clearBtn">מחיקה וחתימה מחדש</button></div>
         </div>
